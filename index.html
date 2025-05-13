@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+    <title>SmartSale Studio | AI Marketing for Realtors & E-commerce</title>
+    <meta name="description" content="AI-Powered Marketing Solutions for Realtors & E-commerce Businesses. Automate your lead generation and sales process with SmartSale Studio." />
+    
+    <!-- Open Graph Tags -->
+    <meta property="og:title" content="SmartSale Studio | AI Marketing for Realtors & E-commerce" />
+    <meta property="og:description" content="AI-Powered Marketing Solutions for Realtors & E-commerce Businesses. Automate your lead generation and sales process with SmartSale Studio." />
+    <meta property="og:type" content="website" />
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+2. Main Entry Point (client/src/main.tsx)
+import { createRoot } from "react-dom/client";
+import App from "./App";
+import "./index.css";
+// Configure tailwind theme
+// This makes the theme available globally
+window.tailwind = {
+  config: {
+    theme: {
+      extend: {
+        colors: {
+          primary: '#0066cc',
+          secondary: '#28a745',
+          dark: '#333333',
+          light: '#f8f9fa'
+        },
+        fontFamily: {
+          inter: ['Inter', 'sans-serif']
+        }
+      }
+    }
+  }
+};
+createRoot(document.getElementById("root")!).render(<App />);
+3. Global TypeScript Definitions (client/src/global.d.ts)
+interface Window {
+  tailwind: {
+    config: {
+      theme: {
+        extend: {
+          colors: {
+            primary: string;
+            secondary: string;
+            dark: string;
+            light: string;
+          };
+          fontFamily: {
+            inter: string[];
+          };
+        };
+      };
+    };
+  };
+}
+4. Main App Component (client/src/App.tsx)
+import { Switch, Route } from "wouter";
+import { queryClient } from "./lib/queryClient";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { Toaster } from "@/components/ui/toaster";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import NotFound from "@/pages/not-found";
+import Home from "@/pages/Home";
+function Router() {
+  return (
+    <Switch>
+      <Route path="/" component={Home} />
+      <Route component={NotFound} />
+    </Switch>
+  );
+}
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Router />
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+}
+export default App;
+5. Query Client (client/src/lib/queryClient.ts)
+import { QueryClient } from "@tanstack/react-query";
+async function throwIfResNotOk(res: Response) {
+  if (!res.ok) {
+    const errorText = await res.text();
+    throw new Error(errorText);
+  }
+  return res;
+}
+export async function apiRequest(url: string, options: RequestInit = {}) {
+  const res = await fetch(url, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...options.headers,
+    },
+  });
+  await throwIfResNotOk(res);
+  const text = await res.text();
+  try {
+    return text ? JSON.parse(text) : null;
+  } catch (e) {
+    console.error("Error parsing JSON", e);
+    return text;
+  }
+}
+type UnauthorizedBehavior = "returnNull" | "throw";
+export const getQueryFn = <T>(options: {
+  on401: UnauthorizedBehavior;
+} = { on401: "throw" }) => {
+  return async ({ queryKey }: { queryKey: string[] }): Promise<T> => {
+    try {
+      const data = await apiRequest(queryKey[0]);
+      return data;
+    } catch (e) {
+      if (
+        e instanceof Error &&
+        e.message.includes("401") &&
+        options.on401 === "returnNull"
+      ) {
+        return null as T;
+      }
+      throw e;
+    }
+  };
+};
+export const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      queryFn: getQueryFn(),
+      staleTime: 1000 * 60 * 5, // 5 minutes
+      retry: false,
+    },
+  },
+});
+6. Home Page (client/src/pages/Home.tsx)
+import React, { useEffect } from 'react';
+import Navbar from '@/components/Navbar';
+import Hero from '@/components/Hero';
+import TrustBadges from '@/components/TrustBadges';
+import Services from '@/components/Services';
+import HowItWorks from '@/components/HowItWorks';
+import WhyUs from '@/components/WhyUs';
+import Testimonials from '@/components/Testimonials';
+import CallToAction from '@/components/CallToAction';
+import BookingSection from '@/components/BookingSection';
+import WhatsAppFloatingButton from '@/components/WhatsAppFloatingButton';
+import Contact from '@/components/Contact';
+import Footer from '@/components/Footer';
+const Home = () => {
+  useEffect(() => {
+    // Set page title
+    document.title = 'SmartSale Studio | AI Marketing for Realtors & E-commerce';
+    
+    // Add smooth scrolling for better user experience
+    document.documentElement.style.scrollBehavior = 'smooth';
+    
+    return () => {
+      // Cleanup
+      document.documentElement.style.scrollBehavior = '';
+    };
+  }, []);
+  
+  return (
+    <div className="font-inter">
+      <Navbar />
+      <Hero />
+      <TrustBadges />
+      <Services />
+      <HowItWorks />
+      <WhyUs />
+      <Testimonials />
+      <CallToAction />
+      <BookingSection />
+      <Contact />
+      <WhatsAppFloatingButton />
+      <Footer />
+    </div>
+  );
+};
+export default Home;
+7. Not Found Page (client/src/pages/not-found.tsx)
+import React from 'react';
+import { Link } from 'wouter';
+export default function NotFound() {
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen p-5 bg-gray-50">
+      <h1 className="text-6xl font-bold text-gray-800 mb-4">404</h1>
+      <h2 className="text-2xl font-medium text-gray-600 mb-6">Page Not Found</h2>
+      <p className="text-gray-500 max-w-md text-center mb-8">
+        The page you're looking for doesn't exist or has been moved.
+      </p>
+      <Link href="/">
+        <a className="px-4 py-2 bg-primary text-white rounded shadow hover:bg-primary/90 transition-colors">
+          Return Home
+        </a>
+      </Link>
+    </div>
+  );
+}
+8. Navbar Component (client/src/components/Navbar.tsx)
+import { useState, useEffect } from 'react';
+import { Link } from 'wouter';
+const Navbar = () => {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 50) {
+        setScrolled(true);
+      } else {
+        setScrolled(false);
+      }
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+  const toggleMenu = () => {
+    setIsMenuOpen(!isMenuOpen);
+  };
+  const navClasses = `bg-white py-4 px-6 fixed w-full z-50 transition-all duration-300 ${
+    scrolled ? 'py-2 shadow-md' : ''
+  }`;
+  const scrollToSection = (id: string) => {
+    setIsMenuOpen(false);
+    const element = document.getElementById(id);
+    if (element) {
+      const navbarHeight = document.getElementById('navbar')?.offsetHeight || 0;
+      const targetPosition = element.getBoundingClientRect().top + window.pageYOffset - navbarHeight;
+      window.scrollTo({
+        top: targetPosition,
+        behavior: 'smooth',
+      });
+    }
+  };
+  return (
+    <nav id="navbar" className={navClasses}>
+      <div className="container mx-auto flex justify-between items-center">
+        <div className="flex items-center space-x-2">
+          <span className="text-primary font-bold text-2xl">SmartSale Studio</span>
+        </div>
+        {/* Desktop Navigation */}
+        <div className="hidden md:flex items-center space-x-8">
+          <button 
+            onClick={() => scrollToSection('services')} 
+            className="text-dark hover:text-primary transition-colors">
+            Services
+          </button>
+          <button 
+            onClick={() => scrollToSection('why-us')} 
+            className="text-dark hover:text-primary transition-colors">
+            Why Us
+          </button>
+          <button 
+            onClick={() => scrollToSection('book')} 
+            className="text-dark hover:text-primary transition-colors">
+            Book a Call
+          </button>
+          <button 
+            onClick={() => scrollToSection('contact')} 
+            className="text-dark hover:text-primary transition-colors">
+            Contact
+          </button>
+          <a 
+            href="https://calendly.com/shivanpersadmaharaj/30min" 
+            className="bg-secondary hover:bg-opacity-80 text-white px-5 py-2 rounded-md transition-all">
+            Book a Demo
+          </a>
+        </div>
+        {/* Mobile Menu Button */}
+        <button 
+          onClick={toggleMenu} 
+          className="md:hidden text-dark focus:outline-none"
+          aria-label="Toggle mobile menu">
+          <i className="fas fa-bars text-2xl"></i>
+        </button>
+      </div>
+      {/* Mobile Navigation */}
+      <div className={`md:hidden bg-white w-full mt-4 p-4 border-t border-gray-100 ${isMenuOpen ? 'block' : 'hidden'}`}>
+        <div className="flex flex-col space-y-4">
+          <button 
+            onClick={() => scrollToSection('services')} 
+            className="text-dark hover:text-primary transition-colors">
+            Services
+          </button>
+          <button 
+            onClick={() => scrollToSection('why-us')} 
+            className="text-dark hover:text-primary transition-colors">
+            Why Us
+          </button>
+          <button 
+            onClick={() => scrollToSection('contact')} 
+            className="text-dark hover:text-primary transition-colors">
+            Contact
+          </button>
+          <a 
+            href="https://calendly.com/shivanpersadmaharaj/30min" 
+            className="bg-secondary hover:bg-opacity-80 text-white px-5 py-3 rounded-md text-center transition-all">
+            Book a Demo
+          </a>
+        </div>
+      </div>
+    </nav>
+  );
+};
+export default Navbar;
+9. Hero Component (client/src/components/Hero.tsx)
+import React from 'react';
+const Hero = () => {
+  return (
+    <header className="bg-gradient-to-r from-primary to-primary/90 text-white pt-32 pb-20 px-6">
+      <div className="container mx-auto text-center">
+        <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6">AI-Powered Marketing Solutions</h1>
+        <p className="text-xl md:text-2xl mb-10 max-w-3xl mx-auto font-light">
+          Automate your lead generation and sales process with SmartSale Studio's AI systems for Realtors & E-commerce Businesses
+        </p>
+        
+        <div className="flex flex-col md:flex-row justify-center gap-4 md:gap-6">
+          <a 
+            href="https://calendly.com/shivanpersadmaharaj/30min" 
+            className="bg-secondary hover:bg-opacity-90 text-white px-8 py-4 rounded-md text-lg font-medium transition-all flex items-center justify-center gap-2 shadow-lg"
+          >
+            <i className="far fa-calendar-check"></i>
+            Book a Free Demo
+          </a>
+          <a 
+            href="https://wa.me/18683261494" 
+            className="bg-white text-primary hover:bg-gray-100 px-8 py-4 rounded-md text-lg font-medium transition-all flex items-center justify-center gap-2 shadow-lg"
+          >
+            <i className="fab fa-whatsapp text-secondary"></i>
+            Chat on WhatsApp
+          </a>
+        </div>
+      </div>
+    </header>
+  );
+};
+export default Hero;
+10. Trust Badges Component (client/src/components/TrustBadges.tsx)
+import React from 'react';
+const TrustBadges = () => {
+  return (
+    <div className="bg-light py-8">
+      <div className="container mx-auto px-6">
+        <div className="text-center mb-6">
+          <p className="text-gray-500 font-medium">Trusted by businesses worldwide</p>
+        </div>
+        <div className="flex flex-wrap justify-center items-center gap-8 md:gap-16">
+          <div className="opacity-70 grayscale hover:grayscale-0 transition-all">
+            <i className="fas fa-building text-4xl text-gray-500"></i>
+          </div>
+          <div className="opacity-70 grayscale hover:grayscale-0 transition-all">
+            <i className="fas fa-store text-4xl text-gray-500"></i>
+          </div>
+          <div className="opacity-70 grayscale hover:grayscale-0 transition-all">
+            <i className="fas fa-home text-4xl text-gray-500"></i>
+          </div>
+          <div className="opacity-70 grayscale hover:grayscale-0 transition-all">
+            <i className="fas fa-shopping-cart text-4xl text-gray-500"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+export default TrustBadges;
+11. Services Component (client/src/components/Services.tsx)
+import React from 'react';
+const Services = () => {
+  return (
+    <section id="services" className="py-20 px-6">
+      <div className="container mx-auto">
+        <div className="text-center mb-16">
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">Our Services</h2>
+          <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+            Tailored AI solutions designed to automate your workflow and boost your business performance
+          </p>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-10 max-w-5xl mx-auto">
+          {/* Real Estate Card */}
+          <div className="bg-white rounded-xl shadow-lg p-8 border border-gray-100 hover:shadow-xl transition-all">
+            <div className="bg-primary/10 w-16 h-16 rounded-full flex items-center justify-center mb-6">
+              <i className="fas fa-home text-2xl text-primary"></i>
+            </div>
+            <h3 className="text-2xl font-bold mb-4">Real Estate Agents</h3>
+            <ul className="space-y-4">
+              <li className="flex items-start gap-3">
+                <i className="fas fa-check-circle text-secondary mt-1"></i>
+                <span>AI Chatbots to qualify and follow up with leads 24/7</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <i className="fas fa-check-circle text-secondary mt-1"></i>
+                <span>Automate showing bookings and appointment reminders</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <i className="fas fa-check-circle text-secondary mt-1"></i>
+                <span>Custom property ads with AI-powered targeting</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <i className="fas fa-check-circle text-secondary mt-1"></i>
+                <span>Personalized follow-up sequences for prospects</span>
+              </li>
+            </ul>
+            <div className="mt-8">
+              <a href="https://calendly.com/shivanpersadmaharaj/30min" className="inline-block bg-primary hover:bg-primary/90 text-white px-6 py-3 rounded-md transition-all">
+                Learn More
+              </a>
+            </div>
+          </div>
+          
+          {/* E-commerce Card */}
+          <div className="bg-white rounded-xl shadow-lg p-8 border border-gray-100 hover:shadow-xl transition-all">
+            <div className="bg-secondary/10 w-16 h-16 rounded-full flex items-center justify-center mb-6">
+              <i className="fas fa-shopping-cart text-2xl text-secondary"></i>
+            </div>
+            <h3 className="text-2xl font-bold mb-4">E-commerce Stores</h3>
+            <ul className="space-y-4">
+              <li className="flex items-start gap-3">
+                <i className="fas fa-check-circle text-secondary mt-1"></i>
+                <span>AI-driven email & SMS marketing automation</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <i className="fas fa-check-circle text-secondary mt-1"></i>
+                <span>Abandoned cart recovery bots that convert</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <i className="fas fa-check-circle text-secondary mt-1"></i>
+                <span>AI customer support and product recommendation</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <i className="fas fa-check-circle text-secondary mt-1"></i>
+                <span>Personalized customer journey optimization</span>
+              </li>
+            </ul>
+            <div className="mt-8">
+              <a href="https://calendly.com/shivanpersadmaharaj/30min" className="inline-block bg-secondary hover:bg-secondary/90 text-white px-6 py-3 rounded-md transition-all">
+                Learn More
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+};
+export default Services;
+12. How It Works Component (client/src/components/HowItWorks.tsx)
+import React from 'react';
+const HowItWorks = () => {
+  return (
+    <section className="bg-light py-20 px-6">
+      <div className="container mx-auto">
+        <div className="text-center mb-16">
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">How It Works</h2>
+          <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+            Our simple process to transform your business with AI
+          </p>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+          {/* Step 1 */}
+          <div className="text-center">
+            <div className="bg-primary w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6 text-white text-2xl font-bold">1</div>
+            <h3 className="text-xl font-bold mb-3">Consultation</h3>
+            <p className="text-gray-600">
+              We analyze your current business processes and identify automation opportunities
+            </p>
+          </div>
+          
+          {/* Step 2 */}
+          <div className="text-center">
+            <div className="bg-primary w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6 text-white text-2xl font-bold">2</div>
+            <h3 className="text-xl font-bold mb-3">Implementation</h3>
+            <p className="text-gray-600">
+              Our team sets up and customizes AI solutions tailored to your specific needs
+            </p>
+          </div>
+          
+          {/* Step 3 */}
+          <div className="text-center">
+            <div className="bg-primary w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6 text-white text-2xl font-bold">3</div>
+            <h3 className="text-xl font-bold mb-3">Growth</h3>
+            <p className="text-gray-600">
+              Watch your business scale while our AI handles leads, sales, and support
+            </p>
+          </div>
+        </div>
+        
+        <div className="text-center mt-12">
+          <a 
+            href="https://calendly.com/shivanpersadmaharaj/30min" 
+            className="bg-secondary hover:bg-secondary/90 text-white px-8 py-4 rounded-md text-lg font-medium transition-all inline-flex items-center gap-2"
+          >
+            <i className="far fa-calendar-check"></i>
+            Schedule Your Free Consultation
+          </a>
+        </div>
+      </div>
+    </section>
+  );
+};
+export default HowItWorks;
+13. Why Us Component (client/src/components/WhyUs.tsx)
+import React from 'react';
+const WhyUs = () => {
+  return (
+    <section id="why-us" className="py-20 px-6">
+      <div className="container mx-auto">
+        <div className="text-center mb-16">
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">Why SmartSale Studio?</h2>
+          <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+            We help businesses automate and scale their operations with cutting-edge AI technology
+          </p>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+          {/* Benefit 1 */}
+          <div className="bg-white rounded-xl p-8 shadow-lg border border-gray-100 hover:shadow-xl transition-all">
+            <div className="text-primary mb-4 text-3xl">
+              <i className="fas fa-chart-line"></i>
+            </div>
+            <h3 className="text-xl font-bold mb-3">Get More Leads & Sales</h3>
+            <p className="text-gray-600">
+              Our AI systems work 24/7 to qualify leads, nurture prospects, and close sales automatically
+            </p>
+          </div>
+          
+          {/* Benefit 2 */}
+          <div className="bg-white rounded-xl p-8 shadow-lg border border-gray-100 hover:shadow-xl transition-all">
+            <div className="text-primary mb-4 text-3xl">
+              <i className="fas fa-clock"></i>
+            </div>
+            <h3 className="text-xl font-bold mb-3">Save Time & Manual Work</h3>
+            <p className="text-gray-600">
+              Eliminate repetitive tasks and focus on what matters while AI handles the rest
+            </p>
+          </div>
+          
+          {/* Benefit 3 */}
+          <div className="bg-white rounded-xl p-8 shadow-lg border border-gray-100 hover:shadow-xl transition-all">
+            <div className="text-primary mb-4 text-3xl">
+              <i className="fas fa-dollar-sign"></i>
+            </div>
+            <h3 className="text-xl font-bold mb-3">Affordable AI Systems</h3>
+            <p className="text-gray-600">
+              Cost-effective done-for-you solutions that deliver ROI from day one
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+};
+export default WhyUs;
+14. Testimonials Component (client/src/components/Testimonials.tsx)
+import React from 'react';
+// This component uses fictional testimonials for display purposes
+const Testimonials = () => {
+  return (
+    <section className="bg-light py-20 px-6">
+      <div className="container mx-auto">
+        <div className="text-center mb-16">
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">What Our Clients Say</h2>
+          <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+            Hear from businesses that have transformed with our AI marketing solutions
+          </p>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+          {/* Testimonial 1 */}
+          <div className="bg-white rounded-xl p-8 shadow-md border border-gray-100">
+            <div className="text-yellow-400 mb-4">
+              <i className="fas fa-star"></i>
+              <i className="fas fa-star"></i>
+              <i className="fas fa-star"></i>
+              <i className="fas fa-star"></i>
+              <i className="fas fa-star"></i>
+            </div>
+            <p className="text-gray-700 mb-6 italic">
+              "The AI chatbot has transformed our lead qualification process. We're saving 20+ hours per week while converting more leads than ever."
+            </p>
+            <div className="flex items-center">
+              <div className="bg-gray-200 w-12 h-12 rounded-full flex items-center justify-center mr-4">
+                <span className="text-gray-500 font-bold">JD</span>
+              </div>
+              <div>
+                <h4 className="font-bold">Jane Doe</h4>
+                <p className="text-gray-500 text-sm">Real Estate Agent</p>
+              </div>
+            </div>
+          </div>
+          
+          {/* Testimonial 2 */}
+          <div className="bg-white rounded-xl p-8 shadow-md border border-gray-100">
+            <div className="text-yellow-400 mb-4">
+              <i className="fas fa-star"></i>
+              <i className="fas fa-star"></i>
+              <i className="fas fa-star"></i>
+              <i className="fas fa-star"></i>
+              <i className="fas fa-star"></i>
+            </div>
+            <p className="text-gray-700 mb-6 italic">
+              "Our abandoned cart recovery rate increased by 38% since implementing SmartSale's AI solution. It's paying for itself many times over."
+            </p>
+            <div className="flex items-center">
+              <div className="bg-gray-200 w-12 h-12 rounded-full flex items-center justify-center mr-4">
+                <span className="text-gray-500 font-bold">JS</span>
+              </div>
+              <div>
+                <h4 className="font-bold">John Smith</h4>
+                <p className="text-gray-500 text-sm">E-commerce Store Owner</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+};
+export default Testimonials;
+15. Call To Action Component (client/src/components/CallToAction.tsx)
+import React from 'react';
+const CallToAction = () => {
+  return (
+    <section className="bg-primary py-20 px-6 text-white">
+      <div className="container mx-auto text-center max-w-4xl">
+        <h2 className="text-3xl md:text-4xl font-bold mb-6">Ready to Grow Your Business with AI?</h2>
+        <p className="text-xl mb-10">Book your free demo today and see how our AI solutions can transform your business</p>
+        
+        <div className="flex flex-col md:flex-row justify-center gap-4">
+          <a 
+            href="https://calendly.com/shivanpersadmaharaj/30min" 
+            className="bg-white text-primary hover:bg-gray-100 px-8 py-4 rounded-md text-lg font-medium transition-all flex items-center justify-center gap-2"
+          >
+            <i className="far fa-calendar-check"></i>
+            Book a Free Demo
+          </a>
+          <a 
+            href="https://wa.me/18683261494" 
+            className="bg-secondary hover:bg-secondary/90 text-white px-8 py-4 rounded-md text-lg font-medium transition-all flex items-center justify-center gap-2"
+          >
+            <i className="fab fa-whatsapp"></i>
+            Chat on WhatsApp
+          </a>
+        </div>
+      </div>
+    </section>
+  );
+};
+export default CallToAction;
+16. Booking Section Component (client/src/components/BookingSection.tsx)
+import React, { useEffect } from 'react';
+const BookingSection = () => {
+  useEffect(() => {
+    // Load Calendly widget script
+    const script = document.createElement('script');
+    script.src = 'https://assets.calendly.com/assets/external/widget.js';
+    script.async = true;
+    document.body.appendChild(script);
+    return () => {
+      // Clean up script when component unmounts
+      document.body.removeChild(script);
+    };
+  }, []);
+  return (
+    <section id="book" className="py-20 px-6 bg-light">
+      <div className="container mx-auto">
+        <div className="text-center mb-12">
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">Book a Free Strategy Call</h2>
+          <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+            Schedule a time that works for you and let's discuss how we can help grow your business
+          </p>
+        </div>
+        
+        <div className="max-w-4xl mx-auto">
+          <div 
+            className="calendly-inline-widget bg-white rounded-lg shadow-md overflow-hidden" 
+            data-url="https://calendly.com/shivanpersadmaharaj/30min"
+            style={{ minWidth: '320px', height: '700px' }}
+          ></div>
+        </div>
+      </div>
+    </section>
+  );
+};
+export default BookingSection;
+17. Contact Component (client/src/components/Contact.tsx)
+import React, { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '@/hooks/use-toast';
+const Contact = () => {
+  const { toast } = useToast();
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    message: ''
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
+  };
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    
+    // Simulate form submission
+    setTimeout(() => {
+      toast({
+        title: "Message Sent",
+        description: "We'll get back to you as soon as possible!",
+      });
+      setFormData({ name: '', email: '', message: '' });
+      setIsSubmitting(false);
+    }, 1000);
+  };
+  return (
+    <section id="contact" className="py-20 px-6">
+      <div className="container mx-auto">
+        <div className="text-center mb-16">
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">Contact Us</h2>
+          <p className="text-lg text-gray-600 max-w-3xl mx-auto">Have questions? Reach out to us directly</p>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 max-w-5xl mx-auto">
+          {/* Contact Info */}
+          <div className="bg-white rounded-xl p-8 shadow-lg border border-gray-100">
+            <h3 className="text-2xl font-bold mb-6">Get In Touch</h3>
+            
+            <div className="space-y-6">
+              <div className="flex items-start gap-4">
+                <div className="bg-primary/10 w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0">
+                  <i className="fab fa-whatsapp text-xl text-primary"></i>
+                </div>
+                <div>
+                  <h4 className="font-bold mb-1">WhatsApp</h4>
+                  <p className="text-gray-600">+1 868 326 1494</p>
+                  <a href="https://wa.me/18683261494" className="text-primary hover:underline mt-1 inline-block">Message us</a>
+                </div>
+              </div>
+              
+              <div className="flex items-start gap-4">
+                <div className="bg-primary/10 w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0">
+                  <i className="far fa-envelope text-xl text-primary"></i>
+                </div>
+                <div>
+                  <h4 className="font-bold mb-1">Email</h4>
+                  <p className="text-gray-600">shivanpersadmaharaj@gmail.com</p>
+                  <a href="mailto:shivanpersadmaharaj@gmail.com" className="text-primary hover:underline mt-1 inline-block">Send an email</a>
+                </div>
+              </div>
+              
+              <div className="flex items-start gap-4">
+                <div className="bg-primary/10 w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0">
+                  <i className="far fa-calendar-check text-xl text-primary"></i>
+                </div>
+                <div>
+                  <h4 className="font-bold mb-1">Schedule</h4>
+                  <p className="text-gray-600">Book a meeting at your convenience</p>
+                  <a href="https://calendly.com/shivanpersadmaharaj/30min" className="text-primary hover:underline mt-1 inline-block">Check availability</a>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Quick Contact Form */}
+          <div className="bg-white rounded-xl p-8 shadow-lg border border-gray-100">
+            <h3 className="text-2xl font-bold mb-6">Send a Message</h3>
+            
+            <form className="space-y-6" onSubmit={handleSubmit}>
+              <div>
+                <label htmlFor="name" className="block text-gray-700 mb-2">Full Name</label>
+                <Input 
+                  type="text" 
+                  id="name" 
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  placeholder="Your name" 
+                  className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary" 
+                  required
+                />
+              </div>
+              
+              <div>
+                <label htmlFor="email" className="block text-gray-700 mb-2">Email Address</label>
+                <Input 
+                  type="email" 
+                  id="email" 
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  placeholder="your@email.com" 
+                  className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary" 
+                  required
+                />
+              </div>
+              
+              <div>
+                <label htmlFor="message" className="block text-gray-700 mb-2">Message</label>
+                <Textarea 
+                  id="message" 
+                  name="message"
+                  value={formData.message}
+                  onChange={handleChange}
+                  rows={4} 
+                  placeholder="How can we help you?" 
+                  className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary" 
+                  required
+                />
+              </div>
+              
+              <Button 
+                type="submit" 
+                className="bg-primary hover:bg-primary/90 text-white px-6 py-3 rounded-md transition-all w-full"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? 'Sending...' : 'Send Message'}
+              </Button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+};
+export default Contact;
+18. Footer Component (client/src/components/Footer.tsx)
+import React from 'react';
+const Footer = () => {
+  return (
+    <footer className="bg-dark text-white py-8 px-6 text-center">
+      <div className="container mx-auto">
+        <p>&copy; {new Date().getFullYear()} SmartSale Studio. All Rights Reserved.</p>
+        
+        <div className="mt-4 flex justify-center space-x-6">
+          <a href="https://wa.me/18683261494" className="text-gray-400 hover:text-white transition-colors" aria-label="WhatsApp">
+            <i className="fab fa-whatsapp text-xl"></i>
+          </a>
+          <a href="mailto:shivanpersadmaharaj@gmail.com" className="text-gray-400 hover:text-white transition-colors" aria-label="Email">
+            <i className="far fa-envelope text-xl"></i>
+          </a>
+          <a href="https://calendly.com/shivanpersadmaharaj/30min" className="text-gray-400 hover:text-white transition-colors" aria-label="Calendar">
+            <i className="far fa-calendar-check text-xl"></i>
+          </a>
+        </div>
+      </div>
+    </footer>
+  );
+};
+export default Footer;
+19. WhatsApp Floating Button (client/src/components/WhatsAppFloatingButton.tsx)
+import React from 'react';
+const WhatsAppFloatingButton = () => {
+  return (
+    <a 
+      href="https://wa.me/18683261494" 
+      target="_blank" 
+      rel="noopener noreferrer"
+      className="fixed bottom-6 right-6 bg-[#25D366] text-white w-14 h-14 rounded-full flex items-center justify-center text-2xl shadow-lg z-50 hover:bg-opacity-90 transition-all"
+      aria-label="Chat on WhatsApp"
+    >
+      <i className="fab fa-whatsapp"></i>
+    </a>
+  );
+};
+export default WhatsAppFloatingButton;
